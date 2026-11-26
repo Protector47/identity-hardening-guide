@@ -1,0 +1,332 @@
+# Identity hardening control catalog.
+# Source of truth for docs/control-index.md. Run scripts/build_index.py after edits.
+# Fields:
+#   id        IDH-<DOMAIN>-NN, unique
+#   title     one line, imperative
+#   severity  critical | high | medium
+#   platforms any of: entra, okta, generic
+#   doc       page that explains the control
+#   verify    how an owner proves the control is in place
+
+controls:
+  # Tenant baseline and emergency access
+  - id: IDH-BASE-01
+    title: Keep two cloud-only break glass accounts excluded from every Conditional Access or sign-on policy except one that requires phishing resistant MFA
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/01-tenant-baseline.md
+    verify: List policy exclusions. Only the break glass group is excluded. Both accounts have a FIDO2 key stored in separate safes.
+  - id: IDH-BASE-02
+    title: Alert on every sign-in by a break glass account
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/01-tenant-baseline.md
+    verify: Run the monthly break glass test sign-in and confirm the SOC ticket opens within 15 minutes.
+  - id: IDH-BASE-03
+    title: Disable self service tenant creation, user app registration, and user consent to unverified publishers
+    severity: high
+    platforms: [entra]
+    doc: docs/01-tenant-baseline.md
+    verify: Authorization policy shows allowedToCreateApps false, allowedToCreateTenants false, and the consent policy is not the legacy allow all setting.
+  - id: IDH-BASE-04
+    title: Restrict guest invitations to named inviter roles and limit guest directory visibility
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/01-tenant-baseline.md
+    verify: External collaboration settings show invites limited to admins and Guest Inviter role. Guest user access is set to the most restrictive level.
+  - id: IDH-BASE-05
+    title: Send identity provider logs to the SIEM with at least 365 days retention
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/01-tenant-baseline.md
+    verify: Query the SIEM for sign-in and audit events older than 90 days. Diagnostic settings or log streaming config exists for sign-in, audit, service principal sign-in, and risk logs.
+
+  # Authentication and MFA
+  - id: IDH-MFA-01
+    title: Block legacy authentication protocols for all users
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/02-authentication-and-mfa.md
+    verify: Sign-in logs for 30 days show zero successful sign-ins with a legacy client app (IMAP, POP, SMTP AUTH, ActiveSync basic, other clients).
+  - id: IDH-MFA-02
+    title: Require MFA for every interactive sign-in, with no trusted network bypass
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/02-authentication-and-mfa.md
+    verify: Sign-in logs show no successful interactive sign-in with single factor authentication outside the break glass accounts.
+  - id: IDH-MFA-03
+    title: Require phishing resistant MFA (FIDO2, Windows Hello for Business, platform passkeys, certificate based) for admins
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/02-authentication-and-mfa.md
+    verify: Authentication strength or authenticator policy applied to all privileged roles. Admin sign-ins show only phishing resistant methods.
+  - id: IDH-MFA-04
+    title: Turn on number matching and application context for push, and disable SMS and voice where an alternative exists
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/02-authentication-and-mfa.md
+    verify: Authenticator method policy shows number matching enforced. SMS and voice are disabled or scoped to a small exception group with an expiry.
+  - id: IDH-MFA-05
+    title: Protect MFA registration and recovery with the same or stronger assurance than sign-in
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/02-authentication-and-mfa.md
+    verify: A policy covers the security info registration action. Help desk reset requires verified identity, not knowledge of employee data.
+  - id: IDH-MFA-06
+    title: Enforce banned password lists and remove periodic password expiry
+    severity: medium
+    platforms: [entra, okta, generic]
+    doc: docs/02-authentication-and-mfa.md
+    verify: Custom banned list contains company, product, and city names. Password expiry is off. Minimum length is 14 for workforce accounts.
+  - id: IDH-MFA-07
+    title: Enable sign-in and user risk detection and act on high risk automatically
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/02-authentication-and-mfa.md
+    verify: High user risk forces secure password change. High sign-in risk forces MFA or blocks. Risky users report has no high risk users older than 7 days.
+
+  # Conditional Access and sign-on policy
+  - id: IDH-CA-01
+    title: Build policies from a documented baseline set with named owners and change records
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/03-conditional-access.md
+    verify: Each policy name maps to a row in the policy register. Last change has a ticket.
+  - id: IDH-CA-02
+    title: Run every new or changed policy in report only mode for at least 7 days before enforcement
+    severity: medium
+    platforms: [entra]
+    doc: docs/03-conditional-access.md
+    verify: Change record contains report only results and the affected user count before the switch to on.
+  - id: IDH-CA-03
+    title: Require compliant or managed devices for admin portals and sensitive applications
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/03-conditional-access.md
+    verify: Admin portal sign-ins from unmanaged devices fail in a test with a non compliant device.
+  - id: IDH-CA-04
+    title: Block sign-in from countries the business does not operate in, with a time boxed travel exception group
+    severity: medium
+    platforms: [entra, okta]
+    doc: docs/03-conditional-access.md
+    verify: Named location list is reviewed quarterly. Travel group members have an end date.
+  - id: IDH-CA-05
+    title: Set sign-in frequency and disable persistent browser sessions for admins and unmanaged devices
+    severity: medium
+    platforms: [entra, okta]
+    doc: docs/03-conditional-access.md
+    verify: Admin session lifetime is 4 hours or less. Unmanaged device sessions are not persistent.
+  - id: IDH-CA-06
+    title: Restrict device code flow and authentication transfer to named exception groups
+    severity: high
+    platforms: [entra]
+    doc: docs/03-conditional-access.md
+    verify: Sign-in logs show device code flow only for accounts in the exception group.
+  - id: IDH-CA-07
+    title: Enable token protection or continuous access evaluation where the platform supports it
+    severity: medium
+    platforms: [entra, okta]
+    doc: docs/03-conditional-access.md
+    verify: CAE is not disabled tenant wide. Token protection or Okta session binding is applied to supported apps for admins.
+  - id: IDH-CA-08
+    title: Review policy exclusions monthly and keep them group based
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/03-conditional-access.md
+    verify: No policy excludes an individual user. Each exclusion group has an owner and an access review.
+
+  # Privileged access
+  - id: IDH-PRIV-01
+    title: Keep standing Global Administrator or Super Admin assignments to the break glass accounts and at most two named admins
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/04-privileged-access.md
+    verify: Role assignment export shows the count. Everyone else is eligible through PIM or an access request flow.
+  - id: IDH-PRIV-02
+    title: Use separate cloud-only admin accounts with no mailbox and no license for daily work
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/04-privileged-access.md
+    verify: No privileged role holder is a synced account. Admin accounts have no Exchange or Teams license.
+  - id: IDH-PRIV-03
+    title: Require just in time activation with justification, approval for tier 0 roles, and maximum activation of 8 hours
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/04-privileged-access.md
+    verify: PIM role settings show approval on tier 0 roles, MFA on activation, and max duration.
+  - id: IDH-PRIV-04
+    title: Treat identity sync servers, federation servers, and PIM approvers as tier 0
+    severity: critical
+    platforms: [entra, generic]
+    doc: docs/04-privileged-access.md
+    verify: Sync and federation hosts are in the tier 0 management boundary with tier 0 admins only. Local admin list on those hosts matches the register.
+  - id: IDH-PRIV-05
+    title: Use privileged access workstations or hardened admin devices for tier 0 work
+    severity: high
+    platforms: [generic]
+    doc: docs/04-privileged-access.md
+    verify: Conditional Access for tier 0 roles requires a device filter or compliant PAW device.
+  - id: IDH-PRIV-06
+    title: Use role assignable groups or custom roles with least privilege instead of broad built in admin roles
+    severity: medium
+    platforms: [entra, okta]
+    doc: docs/04-privileged-access.md
+    verify: Assignments to Global Administrator, Privileged Role Administrator, and Super Admin are justified in the register. Help desk uses scoped roles.
+  - id: IDH-PRIV-07
+    title: Review privileged role assignments monthly
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/04-privileged-access.md
+    verify: Completed access review for each privileged role in the last 31 days, with removals applied.
+
+  # Applications and OAuth
+  - id: IDH-APP-01
+    title: Require admin consent for high impact delegated and all application permissions, with a consent request workflow
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/05-applications-and-oauth.md
+    verify: User consent is limited to verified publishers and low impact permissions. Admin consent workflow has named reviewers.
+  - id: IDH-APP-02
+    title: Inventory every enterprise app and service principal with an owner, data class, and last sign-in
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/05-applications-and-oauth.md
+    verify: Inventory export matches the directory count. Apps with no sign-in for 90 days are disabled.
+  - id: IDH-APP-03
+    title: Prefer certificates or federated credentials over client secrets, and cap secret lifetime at 6 months
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/05-applications-and-oauth.md
+    verify: App credential report shows no secret with an expiry more than 180 days out. App management policy enforces the cap.
+  - id: IDH-APP-04
+    title: Register exact redirect URIs over HTTPS with no wildcards and no unused entries
+    severity: high
+    platforms: [entra, okta, generic]
+    doc: docs/05-applications-and-oauth.md
+    verify: App registration review shows only HTTPS redirect URIs (localhost allowed for native dev apps) and each one resolves to a domain the company owns.
+  - id: IDH-APP-05
+    title: Use authorization code with PKCE for all public and confidential clients, and disable implicit grant and ROPC
+    severity: high
+    platforms: [entra, okta, generic]
+    doc: docs/05-applications-and-oauth.md
+    verify: No app registration has implicit ID or access token issuance enabled. Allow public client flows is off unless documented.
+  - id: IDH-APP-06
+    title: Require assignment for enterprise apps that hold sensitive data
+    severity: medium
+    platforms: [entra, okta]
+    doc: docs/05-applications-and-oauth.md
+    verify: Assignment required is set to yes. Assigned groups match the app owner list.
+  - id: IDH-APP-07
+    title: Sign SAML responses and assertions with SHA-256, and track signing certificate expiry
+    severity: medium
+    platforms: [entra, okta, generic]
+    doc: docs/05-applications-and-oauth.md
+    verify: SAML app settings show SHA-256 and a certificate expiry alert at 60 days.
+  - id: IDH-APP-08
+    title: Validate tokens fully in the relying application (issuer, audience, signature, expiry, tenant)
+    severity: critical
+    platforms: [generic]
+    doc: docs/05-applications-and-oauth.md
+    verify: Unit tests reject tokens with wrong audience, wrong issuer, expired exp, alg none, and a different tenant id in multi tenant apps.
+
+  # Workload identities
+  - id: IDH-WL-01
+    title: Use managed identities for workloads that run in the cloud provider
+    severity: high
+    platforms: [entra, generic]
+    doc: docs/06-workload-identities.md
+    verify: No app registration secret is used by a workload that could run with a managed identity.
+  - id: IDH-WL-02
+    title: Use workload identity federation for CI/CD, scoped to repository, branch, or environment
+    severity: critical
+    platforms: [entra, okta, generic]
+    doc: docs/06-workload-identities.md
+    verify: Federated credential subject is pinned to a specific repo and environment. No long lived cloud keys in CI secrets.
+  - id: IDH-WL-03
+    title: Grant workload identities resource scoped roles, never subscription or tenant wide owner
+    severity: high
+    platforms: [entra, generic]
+    doc: docs/06-workload-identities.md
+    verify: Role assignment export shows no Owner, User Access Administrator, or directory role on service principals outside the approved list.
+  - id: IDH-WL-04
+    title: Monitor service principal sign-ins and credential additions
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/06-workload-identities.md
+    verify: Alert fires on new credential added to an app or service principal, tested once per quarter.
+  - id: IDH-WL-05
+    title: Give every non human account an owner and an expiry date
+    severity: medium
+    platforms: [entra, okta, generic]
+    doc: docs/06-workload-identities.md
+    verify: Service account register has owner and review date for every entry. Accounts without an owner are disabled.
+
+  # Lifecycle and access reviews
+  - id: IDH-LC-01
+    title: Drive joiner, mover, and leaver from the HR system of record
+    severity: high
+    platforms: [entra, okta, generic]
+    doc: docs/07-lifecycle-and-reviews.md
+    verify: Sample ten leavers. All were disabled within 4 hours of HR termination time.
+  - id: IDH-LC-02
+    title: Revoke sessions and refresh tokens on leaver, password reset, and MFA reset
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/07-lifecycle-and-reviews.md
+    verify: Leaver runbook calls session revoke. Sign-in logs show no token based access after the disable time.
+  - id: IDH-LC-03
+    title: Remove access on mover events instead of only adding new access
+    severity: medium
+    platforms: [generic]
+    doc: docs/07-lifecycle-and-reviews.md
+    verify: Mover sample shows old department groups removed within 7 days.
+  - id: IDH-LC-04
+    title: Disable accounts with no sign-in for 60 days and delete after 90
+    severity: medium
+    platforms: [entra, okta]
+    doc: docs/07-lifecycle-and-reviews.md
+    verify: Stale account report has no enabled member accounts above 60 days except documented exceptions.
+  - id: IDH-LC-05
+    title: Run quarterly access reviews for guests and for groups that grant access to sensitive apps
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/07-lifecycle-and-reviews.md
+    verify: Review history shows completion and auto apply of denials.
+
+  # Monitoring and verification
+  - id: IDH-MON-01
+    title: Alert on changes to Conditional Access, sign-on policies, and authentication method policies
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/08-monitoring-and-verification.md
+    verify: Change a test policy in a non production tenant or a disabled policy and confirm the alert.
+  - id: IDH-MON-02
+    title: Alert on privileged role assignment outside the PIM flow
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/08-monitoring-and-verification.md
+    verify: Audit query for permanent role assignments returns only approved changes.
+  - id: IDH-MON-03
+    title: Alert on new federation trust or domain authentication changes
+    severity: critical
+    platforms: [entra, okta]
+    doc: docs/08-monitoring-and-verification.md
+    verify: Alert rule exists for domain federation settings and new identity provider changes.
+  - id: IDH-MON-04
+    title: Alert on admin consent grants and new high privilege application permissions
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/08-monitoring-and-verification.md
+    verify: Grant a low impact permission to a test app and confirm the alert includes the permission list.
+  - id: IDH-MON-05
+    title: Track MFA fatigue patterns and MFA method changes followed by sensitive actions
+    severity: high
+    platforms: [entra, okta]
+    doc: docs/08-monitoring-and-verification.md
+    verify: Query for repeated MFA denials per user per hour returns results to the SOC queue.
+  - id: IDH-MON-06
+    title: Re-run the control verification checklist every quarter and record results
+    severity: medium
+    platforms: [generic]
+    doc: docs/08-monitoring-and-verification.md
+    verify: Filled templates/quarterly-verification.md exists for the last quarter with owners and dates.
